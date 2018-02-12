@@ -30,6 +30,7 @@ for r in rv:
 
 plpy.notice("Test text")
 plan = plpy.prepare("select * from t2 where name=$1 order by id", ["text"])
+plpy.notice(plan.status())
 rv = plpy.execute(plan, ["bob1"])
 for r in rv:
     plpy.notice(str(r))
@@ -79,6 +80,7 @@ NOTICE:  {'id': 8000, 'sex': 'm', 'name': 'bob1', 'online': 1}
 NOTICE:  Test query targetlist containing NULL
 NOTICE:  {'id': 1000, 'sex': 'm', 'name': None, 'online': 1}
 NOTICE:  Test text
+NOTICE:  True
 NOTICE:  {'id': 7000, 'sex': 'm', 'name': 'bob1', 'online': 1}
 NOTICE:  {'id': 8000, 'sex': 'm', 'name': 'bob1', 'online': 1}
 NOTICE:  {'id': 9000, 'sex': 'm', 'name': 'bob1', 'online': 1}

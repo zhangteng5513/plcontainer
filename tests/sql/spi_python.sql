@@ -28,6 +28,7 @@ for r in rv:
 
 plpy.notice("Test text")
 plan = plpy.prepare("select * from t2 where name=$1 order by id", ["text"])
+plpy.notice(plan.status())
 rv = plpy.execute(plan, ["bob1"])
 for r in rv:
     plpy.notice(str(r))
