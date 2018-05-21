@@ -150,7 +150,7 @@ dim(abind(xx,yy,along=1.5))
 return (as.integer(i))
 $$ LANGUAGE plcontainer;
 select rint2(1::int2);
- rint2
+ rint2 
 -------
      1
 (1 row)
