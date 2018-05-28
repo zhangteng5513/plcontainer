@@ -11,7 +11,9 @@
 #include "storage/ipc.h"
 #include "funcapi.h"
 #include "miscadmin.h"
-#include "utils/faultinjector.h"
+#ifndef PLC_PG
+  #include "utils/faultinjector.h"
+#endif
 #include "utils/memutils.h"
 #include "utils/guc.h"
 /* PLContainer Headers */
@@ -28,6 +30,10 @@
 #ifdef PG_MODULE_MAGIC
 
 PG_MODULE_MAGIC;
+#endif
+
+#ifdef PLC_PG
+    volatile bool QueryFinishPending = false;     //todo
 #endif
 
 PG_FUNCTION_INFO_V1(plcontainer_call_handler);
@@ -195,8 +201,9 @@ static Datum plcontainer_call_hook(PG_FUNCTION_ARGS) {
 		free_result(presult->resmsg, false);
 		pfree(presult);
 	}
+#ifndef PLC_PG	
 	SIMPLE_FAULT_NAME_INJECTOR("plcontainer_before_udf_finish");
-
+#endif
 	return result;
 }
 
@@ -235,7 +242,9 @@ static plcProcResult *plcontainer_get_result(FunctionCallInfo fcinfo,
 			int res;
 
 			res = plcontainer_channel_send(conn, (plcMessage *) req);
+#ifndef PLC_PG				
 			SIMPLE_FAULT_NAME_INJECTOR("plcontainer_after_send_request");
+#endif
 
 			if (res < 0) {
 				plc_elog(ERROR, "Error sending data to the client: %d. "
@@ -248,7 +257,9 @@ static plcProcResult *plcontainer_get_result(FunctionCallInfo fcinfo,
 				plcMessage *answer;
 
 				res = plcontainer_channel_receive(conn, &answer, MT_ALL_BITS);
+#ifndef PLC_PG					
 				SIMPLE_FAULT_NAME_INJECTOR("plcontainer_after_recv_request");
+#endif				
 				if (res < 0) {
 					plc_elog(ERROR, "Error receiving data from the client: %d. "
 								"Maybe retry later.", res);
