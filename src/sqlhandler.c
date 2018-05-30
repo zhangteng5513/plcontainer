@@ -345,7 +345,7 @@ plcMessage *handle_sql_message(plcMsgSQL *msg, plcConn *conn, plcProcInfo *pinfo
 				for (i = 0; i < msg->nargs; i++) {
 					if (msg->args[i].type.type == PLC_DATA_TEXT) {
 #ifdef PLC_PG
-						parseTypeString(msg->args[i].type.typeName, &type_oid, &typemod, false);  //todo
+						parseTypeString(msg->args[i].type.typeName, &type_oid, &typemod, false);
 #else						
 						parseTypeString(msg->args[i].type.typeName, &type_oid, &typemod);
 #endif						
