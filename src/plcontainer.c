@@ -259,8 +259,8 @@ static plcProcResult *plcontainer_get_result(FunctionCallInfo fcinfo,
 #endif
 
 			if (res < 0) {
-				plc_elog(ERROR, "Error sending data to the client: %d. "
-							"Maybe retry later.", res);
+				plc_elog(ERROR, "Error sending data to the client. "
+							"Maybe retry later.");
 				return NULL;
 			}
 			free_callreq(req, true, true);
@@ -273,8 +273,8 @@ static plcProcResult *plcontainer_get_result(FunctionCallInfo fcinfo,
 				SIMPLE_FAULT_NAME_INJECTOR("plcontainer_after_recv_request");
 #endif				
 				if (res < 0) {
-					plc_elog(ERROR, "Error receiving data from the client: %d. "
-								"Maybe retry later.", res);
+					plc_elog(ERROR, "Error receiving data from the client. "
+								"Maybe retry later.");
 					break;
 				}
 
@@ -395,8 +395,8 @@ static void plcontainer_process_sql(plcMsgSQL *msg, plcConn *conn, plcProcInfo *
 	if (res != NULL) {
 		retval = plcontainer_channel_send(conn, res);
 		if (retval < 0) {
-			plc_elog(ERROR, "Error sending data to the client: %d. "
-				"Maybe retry later.", retval);
+			plc_elog(ERROR, "Error sending data to the client. "
+				"Maybe retry later.");
 			return;
 		}
 		switch (res->msgtype) {
