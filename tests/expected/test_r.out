@@ -368,8 +368,7 @@ NOTICE:  this is the notice message
 CONTEXT:  SQL statement "select rlogging()"
 WARNING:  this is the warning message
 CONTEXT:  SQL statement "select rlogging()"
-ERROR:  this is the error message
-CONTEXT:  SQL statement "select rlogging()"
+ERROR:  plcontainer: Handle spi message failed due to error: this is the error message (plcontainer.c:390)
 \! psql -d ${PL_TESTDB} -c "select rlogging_fatal();"
 FATAL:  this is the fatal message
 server closed the connection unexpectedly

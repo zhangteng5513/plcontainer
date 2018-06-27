@@ -194,11 +194,13 @@ static plcProcResult *plcontainer_get_result(FunctionCallInfo fcinfo,
 		}
 
 		conn = get_container_conn(runtime_id);
+		bool first_connection= false;
 		if (conn == NULL) {
 			/* TODO: We could only remove this backend when error occurs. */
 			DeleteBackendsWhenError = true;
 			conn = start_backend(runtime_conf_entry);
 			DeleteBackendsWhenError = false;
+			first_connection = true;
 		}
 
 		pfree(runtime_id);
@@ -206,19 +208,45 @@ static plcProcResult *plcontainer_get_result(FunctionCallInfo fcinfo,
 		DeleteBackendsWhenError = true;
 		if (conn != NULL) {
 			int res;
+			if (first_connection == false) {
+				plcMsgPing *mping = (plcMsgPing*) palloc(sizeof(plcMsgPing));
+				mping->msgtype = MT_PING;
+				res = plcontainer_channel_send(conn, (plcMessage *) mping);
+				if (res == 0) {
+					plcMessage *mresp = NULL;
+					res = plcontainer_channel_receive(conn, &mresp, MT_PING_BIT);
+					if (mresp != NULL)
+						pfree(mresp);
+					if (res != 0) {
+						delete_containers();
+						conn = start_backend(runtime_conf_entry);
+					}
+				} else {
+					delete_containers();
+					conn = start_backend(runtime_conf_entry);
+				}
+			}
 
 			res = plcontainer_channel_send(conn, (plcMessage *) req);
 #ifndef PLC_PG				
 			SIMPLE_FAULT_NAME_INJECTOR("plcontainer_after_send_request");
 #endif
-
 			if (res < 0) {
-				plc_elog(ERROR, "Error sending data to the client. "
+				/* container may exit due to former query, here retry to create a new container*/
+				delete_containers();
+				DeleteBackendsWhenError = true;
+				conn = start_backend(runtime_conf_entry);
+				DeleteBackendsWhenError = false;
+				if (conn != NULL) {
+					res = plcontainer_channel_send(conn, (plcMessage *) req);
+				}
+				if (res < 0) {
+					plc_elog(ERROR, "Error sending data to the client. "
 							"Maybe retry later.");
-				return NULL;
+					return NULL;
+				}
 			}
 			free_callreq(req, true, true);
-
 			while (1) {
 				plcMessage *answer;
 
@@ -243,6 +271,7 @@ static plcProcResult *plcontainer_get_result(FunctionCallInfo fcinfo,
 						/* For exception, no need to delete containers. */
 						DeleteBackendsWhenError = false;
 						plcontainer_process_exception((plcMsgError *) answer);
+						delete_containers();
 						break;
 					case MT_SQL:
 						plcontainer_process_sql((plcMsgSQL *) answer, conn, proc);
@@ -349,8 +378,23 @@ static void plcontainer_process_sql(plcMsgSQL *msg, plcConn *conn, plcProcInfo *
 	if (res != NULL) {
 		retval = plcontainer_channel_send(conn, res);
 		if (retval < 0) {
+			/*
+			 * SPI_execute may exit container(e.g. plpy.error)
+			 * in this case, we need to output the plpy.error message
+			 * to end user instead of 'Error sending data to the client'
+			 */
+			if (res->msgtype == MT_EXCEPTION) {
+				plcMsgError* errorResp = (plcMsgError *) res;
+				if (errorResp->message != NULL) {
+					plc_elog(ERROR, "Handle spi message failed due to error: %s",
+							errorResp->message);
+				} else {
+					plc_elog(ERROR, "Handle spi message failed.");
+				}
+			} else {
 			plc_elog(ERROR, "Error sending data to the client. "
 				"Maybe retry later.");
+			}
 			return;
 		}
 		switch (res->msgtype) {
@@ -362,6 +406,9 @@ static void plcontainer_process_sql(plcMsgSQL *msg, plcConn *conn, plcProcInfo *
 				break;
 			case MT_RAW:
 				free_rawmsg((plcMsgRaw *) res);
+				break;
+			case MT_EXCEPTION:
+				free_error((plcMsgError *) res);
 				break;
 			default:
 				ereport(ERROR,
