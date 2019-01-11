@@ -35,6 +35,7 @@ make_cgroups_dir ccp-${CLUSTER_NAME}-1
 pushd gpdb_src
 ./configure --prefix=/usr/local/greenplum-db-devel \
             --without-zlib --without-rt --without-libcurl \
+            --without-zstd \
             --without-libedit-preferred --without-docdir --without-readline \
             --disable-gpcloud --disable-gpfdist --disable-orca \
             --disable-pxf
