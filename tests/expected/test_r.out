@@ -3,7 +3,7 @@ select rshouldnotparse();
 ERROR:  PL/Container client exception occurred:
 DETAIL:  
  Parse Error
-rshouldnotparse <- function(args) {
+gpdb.rshouldnotparse <- function(args) {
 # container: plc_r_shared
 return 'hello'
 }
