@@ -6,11 +6,14 @@ groups:
 - name: plcontainer
   jobs:
   - plcontainer_build_centos7
+  - plcontainer_build_ubuntu18_python_image
   - plcontainer_build_ubuntu18
   - plcontainer_build_python_image
   - plcontainer_build_r_image
   - plcontainer_function_test_centos7
   - plcontainer_resgroup_test_centos7
+  - plcontainer_resgroup_test_ubuntu18
+  - plcontainer_function_test_ubuntu18
 
 ################################################################################
 ################################## RESOURCES ###################################
@@ -188,6 +191,13 @@ resources:
     secret_access_key: {{artifact-bucket-secret-access-key}}
     versioned_file: gpdb-ext-release-local/Python/python-gpdb5/2.7.12/targzs/python-rhel7_x86_64-2.7.12.targz
 
+- name: datascience-python-ubuntu18-gp6
+  type: gcs
+  source:
+    bucket: {{gcs-bucket-intermediates}}
+    json_key: {{concourse-gcs-resources-service-account-key}}
+    versioned_file: data-science/published/gpdb6/DataSciencePython-dev-gp6-ubuntu18-amd64.gppkg
+
 - name: datascience-python-gp6
   type: gcs
   source:
@@ -301,6 +311,59 @@ jobs:
       params:
         file: plcontainer_gpdb_build/plcontainer-concourse.gppkg
 
+- name: plcontainer_function_test_ubuntu18
+  plan:
+  - aggregate:
+    - get: plcontainer_src
+      passed:
+      - plcontainer_build_ubuntu18
+    - get: gpdb_src
+    - get: gpdb_binary
+      resource: bin_gpdb_ubuntu18
+    - get: ccp_src
+      passed: [plcontainer_build_python_image, plcontainer_build_r_image]
+    - get: ubuntu18-image
+    - get: plcontainer_pyclient_docker_image
+      resource: plcontainer_docker_image_centos_python
+      passed: [plcontainer_build_python_image]
+      trigger: true
+    - get: plcontainer_rclient_docker_image
+      resource: plcontainer_docker_image_centos_r
+      passed: [plcontainer_build_r_image]
+      trigger: true
+    - get: plcontainer_gpdb_ubuntu18_build
+      passed: [plcontainer_build_ubuntu18]
+      trigger: true
+  - put: terraform
+    params:
+      <<: *ccp_default_params
+      vars:
+        instance_type: n1-standard-4
+        PLATFORM: centos7
+        disk_size: 100
+        disk_type: pd-ssd
+        zone: {{google-zone}}
+        region: {{google-region}}
+  - task: gen_cluster
+    file: ccp_src/ci/tasks/gen_cluster.yml
+    params:
+      <<: *ccp_gen_cluster_default_params
+      PLATFORM: centos7
+  - task: gpinitsystem
+    file: ccp_src/ci/tasks/gpinitsystem.yml
+  - task: plcontainer
+    file: plcontainer_src/concourse/tasks/plcontainer_tests.yml
+    params:
+      platform: ubuntu18
+    image: ubuntu18-image
+    input_mapping:
+      plcontainer_gpdb_build: plcontainer_gpdb_ubuntu18_build
+    on_success:
+      <<: *ccp_destroy
+  ensure:
+    <<: *set_failed
+
+
 - name: plcontainer_function_test_centos7
   plan:
   - aggregate:
@@ -406,6 +469,59 @@ jobs:
   ensure:
     <<: *set_failed
 
+- name: plcontainer_resgroup_test_ubuntu18
+  plan:
+  - aggregate:
+    - get: plcontainer_src
+      passed:
+      - plcontainer_build_ubuntu18
+    - get: gpdb_src
+    - get: gpdb_binary
+      resource: bin_gpdb_ubuntu18
+    - get: ccp_src
+      passed: [plcontainer_build_python_image, plcontainer_build_r_image]
+    - get: ubuntu18-image
+    - get: plcontainer_pyclient_docker_image
+      resource: plcontainer_docker_image_centos_python
+      passed: [plcontainer_build_python_image]
+      trigger: true
+    - get: plcontainer_rclient_docker_image
+      resource: plcontainer_docker_image_centos_r
+      passed: [plcontainer_build_r_image]
+      trigger: true
+    - get: plcontainer_gpdb_ubuntu18_build
+      passed: [plcontainer_build_ubuntu18]
+      trigger: true
+  - put: terraform
+    params:
+      <<: *ccp_default_params
+      vars:
+        instance_type: n1-standard-4
+        PLATFORM: centos7
+        disk_size: 100
+        disk_type: pd-ssd
+        zone: {{google-zone}}
+        region: {{google-region}}
+  - task: gen_cluster
+    file: ccp_src/ci/tasks/gen_cluster.yml
+    params:
+      <<: *ccp_gen_cluster_default_params
+      PLATFORM: ubuntu18
+  - task: gpinitsystem
+    file: ccp_src/ci/tasks/gpinitsystem.yml
+  - task: plcontainer_resgroup
+    file: plcontainer_src/concourse/tasks/plcontainer_resgroup_tests.yml
+    params:
+      TEST_OS: ubuntu18
+      platform: ubuntu18
+    image: ubuntu18-image
+    input_mapping:
+      plcontainer_gpdb_build: plcontainer_gpdb_ubuntu18_build
+    on_success:
+      <<: *ccp_destroy
+  ensure:
+    <<: *set_failed
+
 # We use CCP to build image, since 'docker build' needs docker 
 # daemon is running. But we cannot start docker daemon inside 
 # concourse container in a neat way.(running docker inside container is ugly)
@@ -460,6 +576,57 @@ jobs:
   ensure:
     <<: *set_failed
 
+- name: plcontainer_build_ubuntu18_python_image
+  plan:
+  - aggregate:
+    - get: plcontainer_src
+    - get: gpdb_src
+    - get: gpdb_binary
+      resource: bin_gpdb_centos7
+    - get: ccp_src
+    - get: ubuntu18-image
+    - get: data-science-bundle
+    - get: python
+      trigger: true
+      resource: python-gp5
+    - get: datascience
+      trigger: true
+      resource: datascience-python-ubuntu18-gp6 
+    - get: openssl
+      trigger: true
+  - put: terraform
+    params:
+      <<: *ccp_default_params
+      vars:
+        instance_type: n1-standard-2
+        PLATFORM: centos7
+        disk_size: 100
+        disk_type: pd-ssd
+        zone: {{google-zone}}
+        region: {{google-region}}
+  - task: gen_cluster
+    file: ccp_src/ci/tasks/gen_cluster.yml
+    params:
+      <<: *ccp_gen_cluster_default_params
+      PLATFORM: centos7
+  - task: gpinitsystem
+    file: ccp_src/ci/tasks/gpinitsystem.yml
+  - task: docker_build
+    file: plcontainer_src/concourse/tasks/docker_build_python.yml
+    params:
+      platform: ubuntu18
+      language: python
+    image: ubuntu18-image
+    input_mapping:
+      plcontainer_gpdb_build: plcontainer_gpdb_ubuntu18_build
+  - put: plcontainer_docker_image_centos_python
+    params:
+      file: plcontainer_docker_image/plcontainer-python-ubuntu18-images-devel.tar.gz
+    on_success:
+      <<: *ccp_destroy
+  ensure:
+    <<: *set_failed
+  
 - name: plcontainer_build_r_image
   plan:
   - aggregate:

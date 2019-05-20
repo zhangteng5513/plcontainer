@@ -48,6 +48,26 @@ install_docker() {
            service docker start; \
         \""
         ;;
+      ubuntu18)
+        ssh centos@$node "sudo bash -c \" \
+           yum install -y yum-utils device-mapper-persistent-data lvm2; \
+           yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo; \
+           yum makecache fast; \
+           yum install -y docker-ce; \
+           yum install -y cpan; \
+           yum install -y perl-Module-CoreList; \
+           systemctl start docker; \
+           groupadd docker; \
+           chown root:docker /var/run/docker.sock; \
+           usermod -a -G docker gpadmin; \
+           service docker stop; \
+           sleep 5; \
+           set -exo pipefail; \
+           mv /var/lib/docker /data/gpdata/docker; \
+           ln -s /data/gpdata/docker /var/lib/docker; \
+           service docker start; \
+        \""
+        ;;
     esac 
 }
 
