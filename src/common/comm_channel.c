@@ -361,8 +361,9 @@ static int send_raw_array_iter(plcConn *conn, plcType *type, plcIterator *iter) 
 	for (i = 0; i < meta->ndims; i++) {
 		res |= send_int32(conn, meta->dims[i]);
 	}
+	rawdata * all_res = pmalloc(meta->size * sizeof(rawdata));
 	for (i = 0; i < meta->size && res == 0; i++) {
-		rawdata *raw_object = iter->next(iter);
+		rawdata *raw_object = iter->next(iter, all_res + i);
 		res |= send_raw_object(conn, type, raw_object);
 		if (!raw_object->isnull) {
 			if (type->type == PLC_DATA_UDT) {
@@ -370,8 +371,8 @@ static int send_raw_array_iter(plcConn *conn, plcType *type, plcIterator *iter) 
 			}
 			pfree(raw_object->value);
 		}
-		pfree(raw_object);
 	}
+	pfree(all_res);
 	if (iter->cleanup != NULL) {
 		iter->cleanup(iter);
 	}

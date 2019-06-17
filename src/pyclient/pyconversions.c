@@ -67,7 +67,7 @@ static int plc_pyobject_as_bytea(PyObject *input, char **output, plcPyType *type
 
 static void plc_pyobject_iter_free(plcIterator *iter);
 
-static rawdata *plc_pyobject_as_array_next(plcIterator *iter);
+static rawdata *plc_pyobject_as_array_next(plcIterator *iter, rawdata * res);
 
 static plcPyInputFunc Ply_get_input_function(plcDatatype dt, bool isArrayElement);
 
@@ -358,10 +358,9 @@ static void plc_pyobject_iter_free(plcIterator *iter) {
 	return;
 }
 
-static rawdata *plc_pyobject_as_array_next(plcIterator *iter) {
+static rawdata *plc_pyobject_as_array_next(plcIterator *iter, rawdata *res) {
 	plcPyArrMeta *meta;
 	plcPyArrPointer *ptrs;
-	rawdata *res;
 	PyObject *obj;
 	int ptr;
 

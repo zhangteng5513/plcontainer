@@ -35,7 +35,7 @@ struct plcIterator {
 	 * used to return next element from client-side array structure to avoid
 	 * creating a copy of full array before sending it
 	 */
-	rawdata *(*next)(plcIterator *self);
+rawdata *(*next)(plcIterator *self, rawdata * res);
 
 	/*
 	 * called after data is sent to free data

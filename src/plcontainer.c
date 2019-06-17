@@ -27,6 +27,7 @@
 #endif
 #include "utils/memutils.h"
 #include "utils/guc.h"
+#include "cdb/cdbvars.h"
 /* PLContainer Headers */
 #include "common/comm_channel.h"
 #include "common/messages/messages.h"

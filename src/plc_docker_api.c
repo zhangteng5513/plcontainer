@@ -232,6 +232,8 @@ int plc_docker_create_container(runtimeConfEntry *conf, char **name, int contain
 			"        \"Binds\": [%s],\n"
 			"        \"CgroupParent\": \"%s\",\n"
 			"        \"Memory\": %lld,\n"
+			"        \"Privileged\": true,\n"
+			"        \"CapAdd\": \"SYS_ADMIN\",\n"
 			"        \"CpuShares\": %lld, \n"
 			"        \"PublishAllPorts\": true,\n"
 			"        \"LogConfig\":{\"Type\": \"%s\"}\n"

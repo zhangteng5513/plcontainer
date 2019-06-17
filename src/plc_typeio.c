@@ -64,7 +64,7 @@ static char *plc_datum_as_array(Datum input, plcTypeInfo *type);
 
 static void plc_backend_array_free(plcIterator *iter);
 
-static rawdata *plc_backend_array_next(plcIterator *self);
+static rawdata *plc_backend_array_next(plcIterator *self, rawdata * res);
 
 static char *plc_datum_as_udt(Datum input, plcTypeInfo *type);
 
@@ -432,13 +432,11 @@ static void plc_backend_array_free(plcIterator *iter) {
 	return;
 }
 
-static rawdata *plc_backend_array_next(plcIterator *self) {
+static rawdata *plc_backend_array_next(plcIterator *self, rawdata * res) {
 	plcTypeInfo *subtyp;
-	rawdata *res;
 	plcPgArrayPosition *pos;
 	Datum itemvalue;
 
-	res = palloc(sizeof(rawdata));
 	pos = (plcPgArrayPosition *) self->position;
 	subtyp = &pos->type->subTypes[0];
 
